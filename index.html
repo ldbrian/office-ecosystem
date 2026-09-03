@@ -63,6 +63,14 @@ var F={
 
 var ppl=[];
 var plant={x:F.pB.x,y:F.pB.y,wilt:1,alive:false};
+var imgCache={};
+function loadImg(name,src){
+  return new Promise(function(resolve){
+    var img=new Image();
+    img.onload=function(){imgCache[name]=img;resolve();};
+    img.src=src;
+  });
+}
 
 function init(){
   ppl=[
@@ -161,9 +169,13 @@ function drawWhiteboard(){
 
 function drawBookshelf(){
   var bs=F.bs;
-  drawBlock(bs.x,bs.y,bs.z,bs.w,bs.d,bs.h,'#8A6C48','#745A3A','#6A5035');
-  var bk=['#A05030','#4068A0','#60A040','#C8A040','#8050A0'];
-  for(var i=0;i<3;i++){var s=toS(bs.x+0.2+i*0.4,bs.y+0.1,bs.z+15+i*20);g.fillStyle=bk[i];g.fillRect(s.x,s.y,8,12);}
+  var img=imgCache['bookshelf'];
+  if(img){
+    var s=toS(bs.x+bs.w/2,bs.y+bs.d/2,bs.z);
+    g.drawImage(img,s.x-img.width/2,s.y-img.height);
+  }else{
+    drawBlock(bs.x,bs.y,bs.z,bs.w,bs.d,bs.h,'#8A6C48','#745A3A','#6A5035');
+  }
 }
 
 function drawDesk(d){
@@ -295,8 +307,12 @@ function draw(){
   drawGlassBox();drawUI();drawAmbient();
 }
 
-init();var lt=0;
-(function loop(t){var dt=lt?t-lt:16;lt=t;update(dt);draw();requestAnimationFrame(loop);})(0);
+Promise.all([
+  loadImg('bookshelf','assets/bookshelf.png')
+]).then(function(){
+  init();var lt=0;
+  (function loop(t){var dt=lt?t-lt:16;lt=t;update(dt);draw();requestAnimationFrame(loop);})(0);
+});
 })();
 </script>
 </body>
