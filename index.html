@@ -24,50 +24,40 @@ var now=new Date(),hh=now.getHours();
 function dayF(){return hh>=7&&hh<20?1:.25}
 
 // ===== 轴测投影 =====
-// 2:1 等距比例
-var ISO={tw:40,th:20}; // 地砖尺寸(屏幕像素)
-var CX=W/2,CY=280; // 世界中心偏上
+// X/Y: Tile单位 (1格=40×20px菱形)
+// Z: 像素高度
+var ISO={tw:40,th:20};
+var CX=W/2,CY=280;
 
-function toS(x,y,z){
+function toS(x,y,h){
   return{
     x:CX+(x-y)*(ISO.tw/2),
-    y:CY+(x+y)*(ISO.th/2)-z
+    y:CY+(x+y)*(ISO.th/2)-h
   };
 }
 
-// ===== 房间尺寸(世界坐标) =====
-var RW=10,RD=8,RH=5; // 宽10 深8 高5(墙壁)
+// ===== 房间 =====
+var RW=10,RD=8;
+var WALL_H=100;
 
-// ===== 家具(世界坐标 x,y,z) =====
+// ===== 家具 (x,y Tile, h 像素) =====
 var F={
-  // 桌子
-  dL:{x:1,y:5,z:0,w:3,d:2,h:2},   // 左桌
-  dR:{x:6,y:5,z:0,w:3,d:2,h:2},   // 右桌
-  // 椅子
+  dL:{x:1,y:5,z:0,w:3,d:2,h:22},
+  dR:{x:6,y:5,z:0,w:3,d:2,h:22},
   cL:{x:2,y:6.5,z:0},
   cR:{x:7,y:6.5,z:0},
-  // 书架(靠左墙)
-  bs:{x:0.5,y:1,z:0,w:1.5,d:1,h:3.5},
-  // 打印机(左前方)
-  pr:{x:0.5,y:3.5,z:0,w:1.5,d:1,h:1.2},
-  // 饮水机(右后)
-  wc:{x:8.5,y:1,z:0,w:1,d:1,h:2.5},
-  // 咖啡机(右侧)
-  cf:{x:8.5,y:3,z:0,w:1,d:1,h:1.5},
-  // 白板(后墙)
-  wb:{x:3,y:0,z:2,w:4,d:0.3,h:2.5},
-  // 公告板(后墙左)
-  bul:{x:0.5,y:0,z:2,w:1.5,d:0.3,h:2},
-  // 挂钟(后墙右)
-  clk:{x:8,y:0,z:3.5},
-  // 窗户(后墙)
-  win:{x:5.5,y:0,z:1.5,w:2.5,d:0.3,h:3},
-  // 植物
-  pB:{x:1,y:7,z:0},  // 大盆栽(左前)
-  pM:{x:8,y:7,z:0},  // 中盆栽(右前)
-  pS1:{x:2.5,y:4.5,z:2}, // 小盆栽(桌上)
-  pS2:{x:7.5,y:4.5,z:2}, // 小盆栽(桌上)
-  // 垃圾桶
+  bs:{x:0.5,y:1,z:0,w:1.5,d:1,h:65},
+  pr:{x:0.5,y:3.5,z:0,w:1.5,d:1,h:18},
+  wc:{x:8.5,y:1,z:0,w:1,d:1,h:45},
+  cf:{x:8.5,y:3,z:0,w:1,d:1,h:28},
+  wb:{x:3,y:0,z:40,w:4,d:0.3,h:55},
+  bul:{x:0.5,y:0,z:45,w:1.5,d:0.3,h:40},
+  clk:{x:8,y:0,z:80},
+  win:{x:5.5,y:0,z:20,w:2.5,d:0.3,h:70},
+  pB:{x:1,y:7,z:0},
+  pM:{x:8,y:7,z:0},
+  pS1:{x:2.5,y:4.5,z:22},
+  pS2:{x:7.5,y:4.5,z:22},
   tr:{x:4,y:7,z:0}
 };
 
@@ -84,12 +74,7 @@ function init(){
 }
 
 function tgt(p){
-  var m={
-    cG:{x:F.cf.x,y:F.cf.y+1},
-    cB:{x:p.desk.x,y:p.desk.y+1},
-    pG:{x:plant.x+0.5,y:plant.y+0.5},
-    pB:{x:p.desk.x,y:p.desk.y+1}
-  };
+  var m={cG:{x:F.cf.x,y:F.cf.y+1},cB:{x:p.desk.x,y:p.desk.y+1},pG:{x:plant.x+0.5,y:plant.y+0.5},pB:{x:p.desk.x,y:p.desk.y+1}};
   return m[p.act]||{x:p.desk.x,y:p.desk.y+1};
 }
 
@@ -118,266 +103,148 @@ function update(dt){
 }
 
 // ===== 轴测绘制 =====
-function R(x,y,w,h,c){g.fillStyle=c;g.fillRect(x|0,y|0,w|h);}
-
-// 画轴测方块(地面/家具)
-function drawBlock(wx,wy,wz, bw,bd,bh, topC,frontC,sideC){
-  // 8个顶点
+function drawBlock(wx,wy,wz,bw,bd,bh,topC,frontC,sideC){
   var p=[];
-  p[0]=toS(wx,wy,wz);        // 前左下
-  p[1]=toS(wx+bw,wy,wz);     // 前右下
-  p[2]=toS(wx+bw,wy+bd,wz);  // 后右下
-  p[3]=toS(wx,wy+bd,wz);     // 后左下
-  p[4]=toS(wx,wy,wz+bh);     // 前左上
-  p[5]=toS(wx+bw,wy,wz+bh);  // 前右上
-  p[6]=toS(wx+bw,wy+bd,wz+bh);// 后右上
-  p[7]=toS(wx,wy+bd,wz+bh);  // 后左上
-
-  // 顶面
-  g.fillStyle=topC;g.beginPath();
-  g.moveTo(p[4].x,p[4].y);g.lineTo(p[5].x,p[5].y);
-  g.lineTo(p[6].x,p[6].y);g.lineTo(p[7].x,p[7].y);g.fill();
-
-  // 前面(左下-右下-右上-左上)
-  g.fillStyle=frontC;g.beginPath();
-  g.moveTo(p[0].x,p[0].y);g.lineTo(p[1].x,p[1].y);
-  g.lineTo(p[5].x,p[5].y);g.lineTo(p[4].x,p[4].y);g.fill();
-
-  // 右面(右下-后右下-后右上-右上)
-  g.fillStyle=sideC;g.beginPath();
-  g.moveTo(p[1].x,p[1].y);g.lineTo(p[2].x,p[2].y);
-  g.lineTo(p[6].x,p[6].y);g.lineTo(p[5].x,p[5].y);g.fill();
+  p[0]=toS(wx,wy,wz);
+  p[1]=toS(wx+bw,wy,wz);
+  p[2]=toS(wx+bw,wy+bd,wz);
+  p[3]=toS(wx,wy+bd,wz);
+  p[4]=toS(wx,wy,wz+bh);
+  p[5]=toS(wx+bw,wy,wz+bh);
+  p[6]=toS(wx+bw,wy+bd,wz+bh);
+  p[7]=toS(wx,wy+bd,wz+bh);
+  g.fillStyle=topC;g.beginPath();g.moveTo(p[4].x,p[4].y);g.lineTo(p[5].x,p[5].y);g.lineTo(p[6].x,p[6].y);g.lineTo(p[7].x,p[7].y);g.fill();
+  g.fillStyle=frontC;g.beginPath();g.moveTo(p[0].x,p[0].y);g.lineTo(p[1].x,p[1].y);g.lineTo(p[5].x,p[5].y);g.lineTo(p[4].x,p[4].y);g.fill();
+  g.fillStyle=sideC;g.beginPath();g.moveTo(p[1].x,p[1].y);g.lineTo(p[2].x,p[2].y);g.lineTo(p[6].x,p[6].y);g.lineTo(p[5].x,p[5].y);g.fill();
 }
 
-// 画地板格子
 function drawFloor(){
-  for(var x=0;x<RW;x++){
-    for(var y=0;y<RD;y++){
-      var light=(x+y)%2===0;
-      drawBlock(x,y,0, 1,1,0.05,
-        light?'#C9AD78':'#BFA070',
-        light?'#B89868':'#A88858',
-        light?'#B89868':'#A88858');
-    }
+  for(var x=0;x<RW;x++)for(var y=0;y<RD;y++){
+    var l=(x+y)%2===0;
+    drawBlock(x,y,0,1,1,2,l?'#C9AD78':'#BFA070',l?'#B89868':'#A88858',l?'#B89868':'#A88858');
   }
-  // 鹅卵石边缘(前边)
-  for(var x=0;x<RW;x++){
-    drawBlock(x,RD,0, 1,0.4,0.3, '#8A7A6A','#7A6A5A','#6A5A4A');
-  }
-  // 草地
-  for(var x=0;x<RW;x++){
-    drawBlock(x,RD+0.3,0.3, 1,0.3,0.15, '#5A8A3A','#4A7A2A','#3A6A1A');
-  }
+  for(var x=0;x<RW;x++)drawBlock(x,RD,0,1,0.4,8,'#8A7A6A','#7A6A5A','#6A5A4A');
+  for(var x=0;x<RW;x++)drawBlock(x,RD+0.3,6,1,0.3,4,'#5A8A3A','#4A7A2A','#3A6A1A');
 }
 
-// 画墙壁
 function drawWalls(){
-  // 后墙
-  drawBlock(0,0,0, RW,0.3,RH, '#E8DCD0','#DDD0C0','#D0C4B4');
-  // 左墙
-  drawBlock(0,0,0, 0.3,RD,RH, '#EDE3D5','#DDD0C0','#D0C4B4');
-  // 右墙(部分)
-  drawBlock(RW-0.3,0,0, 0.3,RD,RH, '#E8DCD0','#D8CCBC','#C8BCA8');
+  drawBlock(0,0,0,RW,0.3,WALL_H,'#E8DCD0','#DDD0C0','#D0C4B4');
+  drawBlock(0,0,0,0.3,RD,WALL_H,'#EDE3D5','#DDD0C0','#D0C4B4');
+  drawBlock(RW-0.3,0,0,0.3,RD,WALL_H,'#E8DCD0','#D8CCBC','#C8BCA8');
 }
 
-// 画窗户(后墙上)
 function drawWindow(){
   var w=F.win;
-  drawBlock(w.x,w.y,w.z, w.w,w.d,w.h, '#78B8E0','#6AADC8','#5A9DB8');
-  // 窗框
-  drawBlock(w.x-0.1,w.y-0.1,w.z-0.1, w.w+0.2,0.1,w.h+0.2, '#6B5B45','#5A4A38','#4A3A2A');
-  // 十字窗棂
-  drawBlock(w.x+w.w/2-0.05,w.y-0.15,w.z, 0.1,0.1,w.h, '#6B5B45','#5A4A38','#4A3A2A');
-  drawBlock(w.x,w.y-0.15,w.z+w.h/2-0.05, w.w,0.1,0.1, '#6B5B45','#5A4A38','#4A3A2A');
+  drawBlock(w.x,w.y,w.z,w.w,w.d,w.h,'#78B8E0','#6AADC8','#5A9DB8');
+  drawBlock(w.x-0.1,w.y-0.1,w.z-3,w.w+0.2,0.1,w.h+6,'#6B5B45','#5A4A38','#4A3A2A');
+  drawBlock(w.x+w.w/2-0.05,w.y-0.15,w.z,0.1,0.1,w.h,'#6B5B45','#5A4A38','#4A3A2A');
+  drawBlock(w.x,w.y-0.15,w.z+w.h/2,w.w,0.1,0.1,'#6B5B45','#5A4A38','#4A3A2A');
 }
 
-// 画白板
 function drawWhiteboard(){
   var wb=F.wb;
-  drawBlock(wb.x,wb.y,wb.z, wb.w,wb.d,wb.h, '#F0F0E8','#E8E0D8','#E0D8D0');
-  // 图表线条
-  var s=toS(wb.x+0.5,wb.y-0.2,wb.z+1.5);
-  g.fillStyle='#E85040';g.fillRect(s.x,s.y,20,2);
-  s=toS(wb.x+0.5,wb.y-0.2,wb.z+1);
-  g.fillStyle='#4088D8';g.fillRect(s.x,s.y,30,2);
-  s=toS(wb.x+0.5,wb.y-0.2,wb.z+0.5);
-  g.fillStyle='#50A050';g.fillRect(s.x,s.y,15,2);
+  drawBlock(wb.x,wb.y,wb.z,wb.w,wb.d,wb.h,'#F0F0E8','#E8E0D8','#E0D8D0');
+  var s=toS(wb.x+0.5,wb.y-0.2,wb.z+40);g.fillStyle='#E85040';g.fillRect(s.x,s.y,20,2);
+  s=toS(wb.x+0.5,wb.y-0.2,wb.z+30);g.fillStyle='#4088D8';g.fillRect(s.x,s.y,30,2);
+  s=toS(wb.x+0.5,wb.y-0.2,wb.z+20);g.fillStyle='#50A050';g.fillRect(s.x,s.y,15,2);
 }
 
-// 画书架
 function drawBookshelf(){
   var bs=F.bs;
-  drawBlock(bs.x,bs.y,bs.z, bs.w,bs.d,bs.h, '#8A6C48','#745A3A','#6A5035');
-  // 书
+  drawBlock(bs.x,bs.y,bs.z,bs.w,bs.d,bs.h,'#8A6C48','#745A3A','#6A5035');
   var bk=['#A05030','#4068A0','#60A040','#C8A040','#8050A0'];
-  for(var i=0;i<3;i++){
-    var s=toS(bs.x+0.2+i*0.4,bs.y+0.1,bs.z+0.5+i*1);
-    g.fillStyle=bk[i];g.fillRect(s.x,s.y,8,12);
-  }
+  for(var i=0;i<3;i++){var s=toS(bs.x+0.2+i*0.4,bs.y+0.1,bs.z+15+i*20);g.fillStyle=bk[i];g.fillRect(s.x,s.y,8,12);}
 }
 
-// 画桌子
 function drawDesk(d){
-  drawBlock(d.x,d.y,d.z, d.w,d.d,0.1, '#BCA070','#A08058','#907048');
-  drawBlock(d.x,d.y,d.z+0.1, d.w,d.d,d.h-0.1, '#A08058','#8A6C48','#7A5C38');
-  // 桌面
-  drawBlock(d.x,d.y,d.z+d.h-0.1, d.w,d.d,0.1, '#CCAA78','#B89868','#A88858');
-  // 显示器
-  drawBlock(d.x+0.5,d.y+0.3,d.z+d.h, 1,0.1,0.8, '#222','#1A1A1A','#111');
-  var ds=toS(d.x+0.6,d.y+0.35,d.z+d.h+0.1);
+  drawBlock(d.x,d.y,d.z,d.w,d.d,3,'#BCA070','#A08058','#907048');
+  drawBlock(d.x,d.y,d.z+3,d.w,d.d,d.h-4,'#A08058','#8A6C48','#7A5C38');
+  drawBlock(d.x,d.y,d.z+d.h-1,d.w,d.d,2,'#CCAA78','#B89868','#A88858');
+  drawBlock(d.x+0.5,d.y+0.3,d.z+d.h,1,0.1,18,'#222','#1A1A1A','#111');
+  var ds=toS(d.x+0.6,d.y+0.35,d.z+d.h+2);
   var fl=.4+.3*Math.sin(Date.now()*.0015);
   g.fillStyle='rgba(80,180,120,'+fl*dayF()*.35+')';g.fillRect(ds.x,ds.y,18,12);
-  // 键盘
-  drawBlock(d.x+0.3,d.y+1,d.z+d.h, 0.8,0.4,0.05, '#444','#3A3A3A','#333');
+  drawBlock(d.x+0.3,d.y+1,d.z+d.h,0.8,0.4,1,'#444','#3A3A3A','#333');
 }
 
-// 画椅子
 function drawChair(c){
-  drawBlock(c.x,c.y,c.z, 0.8,0.8,0.05, '#4A4A4A','#3E3E3E','#363636');
-  drawBlock(c.x+0.1,c.y+0.1,c.z+0.05, 0.6,0.6,0.8, '#3E3E3E','#353535','#2E2E2E');
-  drawBlock(c.x,c.y,c.z+0.85, 0.8,0.1,0.6, '#444','#3A3A3A','#333');
+  drawBlock(c.x,c.y,c.z,0.8,0.8,3,'#4A4A4A','#3E3E3E','#363636');
+  drawBlock(c.x+0.1,c.y+0.1,c.z+3,0.6,0.6,18,'#3E3E3E','#353535','#2E2E2E');
+  drawBlock(c.x,c.y,c.z+21,0.8,0.1,15,'#444','#3A3A3A','#333');
 }
 
-// 画饮水机
 function drawWaterCooler(){
   var wc=F.wc;
-  drawBlock(wc.x,wc.y,wc.z, wc.w,wc.d,wc.h, '#DDD','#CCC','#BBB');
-  drawBlock(wc.x+0.15,wc.y+0.1,wc.z+wc.h, 0.7,0.7,0.8, 'rgba(100,180,220,0.4)','rgba(80,160,200,0.3)','rgba(60,140,180,0.3)');
+  drawBlock(wc.x,wc.y,wc.z,wc.w,wc.d,wc.h,'#DDD','#CCC','#BBB');
+  drawBlock(wc.x+0.15,wc.y+0.1,wc.z+wc.h,0.7,0.7,20,'rgba(100,180,220,0.4)','rgba(80,160,200,0.3)','rgba(60,140,180,0.3)');
 }
 
-// 画咖啡机
 function drawCoffeeMachine(){
   var cf=F.cf;
-  drawBlock(cf.x,cf.y,cf.z, cf.w,cf.d,cf.h, '#555','#444','#3A3A3A');
-  drawBlock(cf.x+0.1,cf.y+0.1,cf.z+cf.h, cf.w-0.2,cf.d-0.2,0.3, '#666','#555','#4A4A4A');
-  // 蒸汽
-  if(dayF()>.5){
-    var s=toS(cf.x+cf.w/2,cf.y+cf.d/2,cf.z+cf.h+0.5);
-    g.fillStyle='rgba(255,255,255,0.3)';
-    var t=Date.now()*.003;
-    for(var i=0;i<3;i++)g.fillRect(s.x+Math.sin(t+i)*3,s.y-i*4+Math.sin(t+i*.7)*2,2,2);
-  }
+  drawBlock(cf.x,cf.y,cf.z,cf.w,cf.d,cf.h,'#555','#444','#3A3A3A');
+  drawBlock(cf.x+0.1,cf.y+0.1,cf.z+cf.h,cf.w-0.2,cf.d-0.2,5,'#666','#555','#4A4A4A');
+  if(dayF()>.5){var s=toS(cf.x+cf.w/2,cf.y+cf.d/2,cf.z+cf.h+8);g.fillStyle='rgba(255,255,255,0.3)';var t=Date.now()*.003;for(var i=0;i<3;i++)g.fillRect(s.x+Math.sin(t+i)*3,s.y-i*4+Math.sin(t+i*.7)*2,2,2);}
 }
 
-// 画植物
 function drawPlant(px,py,pz,big,wilt){
   var s=big?0.8:0.4;
-  // 花盆
-  drawBlock(px,py,pz, s,s,s*0.6, '#A87858','#886040','#785030');
+  drawBlock(px,py,pz,s,s,s*12,'#A87858','#886040','#785030');
   if(wilt<.75){
-    var n=Math.floor((1-wilt)*6)+2;
-    var lc=wilt>.45?'#3D6835':'#5A8A48';
-    for(var i=0;i<n;i++){
-      var a=i/n*Math.PI*1.3-.4;
-      var lx=px+s/2+Math.cos(a)*(0.3+i*0.15);
-      var ly=py+s/2+Math.sin(a)*(0.2+i*0.1);
-      var ls=toS(lx,ly,pz+s*0.6+0.3+i*0.2);
-      g.fillStyle=lc;g.fillRect(ls.x-2,ls.y-3,5,4);
-    }
-  }else{
-    var ls=toS(px+s/2,py+s/2,pz+s*0.6);
-    g.fillStyle='#8B7355';g.fillRect(ls.x,ls.y-8,2,8);
-    g.fillRect(ls.x+4,ls.y-6,2,6);
-  }
+    var n=Math.floor((1-wilt)*6)+2;var lc=wilt>.45?'#3D6835':'#5A8A48';
+    for(var i=0;i<n;i++){var a=i/n*Math.PI*1.3-.4;var lx=px+s/2+Math.cos(a)*(0.3+i*0.15);var ly=py+s/2+Math.sin(a)*(0.2+i*0.1);var ls=toS(lx,ly,pz+s*12+5+i*8);g.fillStyle=lc;g.fillRect(ls.x-2,ls.y-3,5,4);}
+  }else{var ls=toS(px+s/2,py+s/2,pz+s*12);g.fillStyle='#8B7355';g.fillRect(ls.x,ls.y-8,2,8);g.fillRect(ls.x+4,ls.y-6,2,6);}
 }
 
-// 画垃圾桶
-function drawTrash(){
-  var tr=F.tr;
-  drawBlock(tr.x,tr.y,tr.z, 0.5,0.5,0.6, '#555','#444','#3A3A3A');
-}
+function drawTrash(){var tr=F.tr;drawBlock(tr.x,tr.y,tr.z,0.5,0.5,15,'#555','#444','#3A3A3A');}
 
-// 画角色
-function drawPerson(p){
-  var s=toS(p.x,p.y,p.z);
-  // 阴影
-  g.fillStyle='rgba(0,0,0,0.08)';
-  g.beginPath();g.ellipse(s.x,s.y+2,8,3,0,0,Math.PI*2);g.fill();
-  // 身体(轴测方向的简化人物)
-  var dir=p.dir;
-  // 头
-  g.fillStyle=p.hair;g.fillRect(s.x-4,s.y-28,8,5);
-  g.fillStyle='#E8BA98';g.fillRect(s.x-3,s.y-23,6,5);
-  g.fillStyle='#D0A480';g.fillRect(s.x-3,s.y-18,6,3);
-  // 身体
-  g.fillStyle=p.col;g.fillRect(s.x-4,s.y-15,8,10);
-  g.fillStyle='rgba(255,255,255,0.12)';g.fillRect(s.x-4,s.y-15,8,2);
-  // 手臂
-  if(p.st==='drink'&&p.cup){
-    g.fillStyle=p.col;g.fillRect(s.x+dir*4,s.y-12,3,6);
-    g.fillStyle='#F0E8E0';g.fillRect(s.x+dir*5,s.y-14,4,4);
-  }else if(p.st==='water'){
-    g.fillStyle=p.col;g.fillRect(s.x+dir*4,s.y-10,3,6);
-    g.fillStyle='#888';g.fillRect(s.x+dir*6,s.y-6,5,3);
-  }else{
-    var sw=p.wf<2?0:1;
-    g.fillStyle=p.col;g.fillRect(s.x-5,s.y-12+sw,3,6);
-    g.fillRect(s.x+2,s.y-12-sw,3,6);
-  }
-  // 腿
-  g.fillStyle='#484858';
-  if(p.wf===0||p.wf===2){g.fillRect(s.x-3,s.y-5,3,7);g.fillRect(s.x+1,s.y-5,3,7);}
-  else{g.fillRect(s.x-4,s.y-5,3,7);g.fillRect(s.x+2,s.y-5,3,7);}
-  g.fillStyle='#333';g.fillRect(s.x-3,s.y+2,4,2);g.fillRect(s.x+1,s.y+2,4,2);
-}
-
-// 画公告板
 function drawBulletin(){
-  var b=F.bul;
-  drawBlock(b.x,b.y,b.z, b.w,b.d,b.h, '#A08058','#8A6C48','#7A5C38');
-  var s=toS(b.x+0.3,b.y-0.2,b.z+0.8);
-  g.fillStyle='#E85040';g.fillRect(s.x,s.y,6,8);
-  g.fillStyle='#4088D8';g.fillRect(s.x+8,s.y,6,8);
-  g.fillStyle='#50A050';g.fillRect(s.x,s.y+10,6,8);
-  g.fillStyle='#E8B830';g.fillRect(s.x+8,s.y+10,6,8);
+  var b=F.bul;drawBlock(b.x,b.y,b.z,b.w,b.d,b.h,'#A08058','#8A6C48','#7A5C38');
+  var s=toS(b.x+0.3,b.y-0.2,b.z+10);
+  g.fillStyle='#E85040';g.fillRect(s.x,s.y,6,8);g.fillStyle='#4088D8';g.fillRect(s.x+8,s.y,6,8);
+  g.fillStyle='#50A050';g.fillRect(s.x,s.y+10,6,8);g.fillStyle='#E8B830';g.fillRect(s.x+8,s.y+10,6,8);
 }
 
-// 画挂钟
 function drawClock(){
-  var c=F.clk;
-  var s=toS(c.x,c.y,c.z);
+  var c=F.clk;var s=toS(c.x,c.y,c.z);
   g.fillStyle='#F0EDE8';g.beginPath();g.arc(s.x,s.y,10,0,Math.PI*2);g.fill();
   g.fillStyle='#DDD';g.beginPath();g.arc(s.x,s.y,8,0,Math.PI*2);g.fill();
   g.fillStyle='#333';g.font='7px monospace';g.textAlign='center';
   var t=new Date();g.fillText((t.getHours()%12)+':'+(t.getMinutes()<10?'0':'')+t.getMinutes(),s.x,s.y+3);
 }
 
-// 玻璃缸
+function drawPerson(p){
+  var s=toS(p.x,p.y,p.z);
+  g.fillStyle='rgba(0,0,0,0.08)';g.beginPath();g.ellipse(s.x,s.y+2,8,3,0,0,Math.PI*2);g.fill();
+  g.fillStyle=p.hair;g.fillRect(s.x-4,s.y-28,8,5);
+  g.fillStyle='#E8BA98';g.fillRect(s.x-3,s.y-23,6,5);
+  g.fillStyle='#D0A480';g.fillRect(s.x-3,s.y-18,6,3);
+  g.fillStyle=p.col;g.fillRect(s.x-4,s.y-15,8,10);
+  g.fillStyle='rgba(255,255,255,0.12)';g.fillRect(s.x-4,s.y-15,8,2);
+  if(p.st==='drink'&&p.cup){g.fillStyle=p.col;g.fillRect(s.x+p.dir*4,s.y-12,3,6);g.fillStyle='#F0E8E0';g.fillRect(s.x+p.dir*5,s.y-14,4,4);}
+  else if(p.st==='water'){g.fillStyle=p.col;g.fillRect(s.x+p.dir*4,s.y-10,3,6);g.fillStyle='#888';g.fillRect(s.x+p.dir*6,s.y-6,5,3);}
+  else{var sw=p.wf<2?0:1;g.fillStyle=p.col;g.fillRect(s.x-5,s.y-12+sw,3,6);g.fillRect(s.x+2,s.y-12-sw,3,6);}
+  g.fillStyle='#484858';
+  if(p.wf===0||p.wf===2){g.fillRect(s.x-3,s.y-5,3,7);g.fillRect(s.x+1,s.y-5,3,7);}
+  else{g.fillRect(s.x-4,s.y-5,3,7);g.fillRect(s.x+2,s.y-5,3,7);}
+  g.fillStyle='#333';g.fillRect(s.x-3,s.y+2,4,2);g.fillRect(s.x+1,s.y+2,4,2);
+}
+
 function drawGlassBox(){
-  // 玻璃面板(半透明)
   g.globalAlpha=0.04;
-  // 前面板
-  var p0=toS(0,RD,0),p1=toS(RW,RD,0),p2=toS(RW,RD,RH),p3=toS(0,RD,RH);
-  g.fillStyle='#A0C8E0';g.beginPath();
-  g.moveTo(p0.x,p0.y);g.lineTo(p1.x,p1.y);g.lineTo(p2.x,p2.y);g.lineTo(p3.x,p3.y);g.fill();
-  // 左面板
-  var q0=toS(0,0,0),q1=toS(0,RD,0),q2=toS(0,RD,RH),q3=toS(0,0,RH);
+  var p0=toS(0,RD,0),p1=toS(RW,RD,0),p2=toS(RW,RD,WALL_H),p3=toS(0,RD,WALL_H);
+  g.fillStyle='#A0C8E0';g.beginPath();g.moveTo(p0.x,p0.y);g.lineTo(p1.x,p1.y);g.lineTo(p2.x,p2.y);g.lineTo(p3.x,p3.y);g.fill();
+  var q0=toS(0,0,0),q1=toS(0,RD,0),q2=toS(0,RD,WALL_H),q3=toS(0,0,WALL_H);
   g.beginPath();g.moveTo(q0.x,q0.y);g.lineTo(q1.x,q1.y);g.lineTo(q2.x,q2.y);g.lineTo(q3.x,q3.y);g.fill();
-  // 右面板
-  var r0=toS(RW,0,0),r1=toS(RW,RD,0),r2=toS(RW,RD,RH),r3=toS(RW,0,RH);
+  var r0=toS(RW,0,0),r1=toS(RW,RD,0),r2=toS(RW,RD,WALL_H),r3=toS(RW,0,WALL_H);
   g.beginPath();g.moveTo(r0.x,r0.y);g.lineTo(r1.x,r1.y);g.lineTo(r2.x,r2.y);g.lineTo(r3.x,r3.y);g.fill();
   g.globalAlpha=1;
-
-  // 边框线
   g.strokeStyle='rgba(255,255,255,0.12)';g.lineWidth=1.5;
-  // 前框
   g.beginPath();g.moveTo(p0.x,p0.y);g.lineTo(p1.x,p1.y);g.lineTo(p2.x,p2.y);g.lineTo(p3.x,p3.y);g.closePath();g.stroke();
-  // 左框
   g.beginPath();g.moveTo(q0.x,q0.y);g.lineTo(q1.x,q1.y);g.lineTo(q2.x,q2.y);g.lineTo(q3.x,q3.y);g.closePath();g.stroke();
-  // 右框
   g.beginPath();g.moveTo(r0.x,r0.y);g.lineTo(r1.x,r1.y);g.lineTo(r2.x,r2.y);g.lineTo(r3.x,r3.y);g.closePath();g.stroke();
-
-  // 提手
-  var ht=toS(RW/2,0,RH);
-  g.strokeStyle='rgba(140,130,120,0.4)';g.lineWidth=2;
-  g.beginPath();g.arc(ht.x,ht.y-8,12,Math.PI,0);g.stroke();
-  g.strokeStyle='rgba(255,255,255,0.1)';g.lineWidth=1;
-  g.beginPath();g.arc(ht.x,ht.y-8,12,Math.PI+.3,-.3);g.stroke();
-
-  // 反光
-  g.fillStyle='rgba(255,255,255,0.015)';
-  var rx0=toS(0.5,RD-0.5,0.5),rx1=toS(1.5,RD-0.5,0.5),rx2=toS(1.5,RD-0.5,RH-0.5),rx3=toS(0.5,RD-0.5,RH-0.5);
-  g.beginPath();g.moveTo(rx0.x,rx0.y);g.lineTo(rx1.x,rx1.y);g.lineTo(rx2.x,rx2.y);g.lineTo(rx3.x,rx3.y);g.fill();
+  var ht=toS(RW/2,0,WALL_H);
+  g.strokeStyle='rgba(140,130,120,0.4)';g.lineWidth=2;g.beginPath();g.arc(ht.x,ht.y-8,12,Math.PI,0);g.stroke();
+  g.strokeStyle='rgba(255,255,255,0.1)';g.lineWidth=1;g.beginPath();g.arc(ht.x,ht.y-8,12,Math.PI+.3,-.3);g.stroke();
 }
 
 function drawUI(){
@@ -391,47 +258,26 @@ function drawAmbient(){
   var d=dayF();
   if(d<1){g.fillStyle='rgba(8,12,30,'+(1-d)*.25+')';g.fillRect(0,0,W,H);}
   if(hh>=17&&hh<20){g.fillStyle='rgba(255,140,40,0.03)';g.fillRect(0,0,W,H);}
-  if(d>.5){g.fillStyle='rgba(255,240,200,0.08)';for(var i=0;i<4;i++){var dx=CX+Math.sin(Date.now()*.0002+i*1.7)*150;var dy=150+Math.cos(Date.now()*.00015+i*2.1)*80+i*50;g.fillRect(dx,dy,1,1);}}
 }
 
-// ===== 主循环 =====
 function draw(){
-  g.clearRect(0,0,W,H);
-  g.fillStyle='#1a1510';g.fillRect(0,0,W,H);
-
-  // 木桌(缸下面)
-  g.fillStyle='#B89868';
-  var tb0=toS(-1,-1,-0.5),tb1=toS(RW+1,-1,-0.5),tb2=toS(RW+1,RD+2,-0.5),tb3=toS(-1,RD+2,-0.5);
-  g.beginPath();g.moveTo(tb0.x,tb0.y);g.lineTo(tb1.x,tb1.y);g.lineTo(tb2.x,tb2.y);g.lineTo(tb3.x,tb3.y);g.fill();
-
-  drawWalls();
-  drawFloor();
-  drawWindow();
-  drawWhiteboard();
-  drawBulletin();
-  drawClock();
-  drawBookshelf();
-  drawDesk(F.dL);drawDesk(F.dR);
-  drawChair(F.cL);drawChair(F.cR);
-  drawWaterCooler();
-  drawCoffeeMachine();
+  g.clearRect(0,0,W,H);g.fillStyle='#1a1510';g.fillRect(0,0,W,H);
+  var tb0=toS(-1,-1,-2),tb1=toS(RW+1,-1,-2),tb2=toS(RW+1,RD+2,-2),tb3=toS(-1,RD+2,-2);
+  g.fillStyle='#B89868';g.beginPath();g.moveTo(tb0.x,tb0.y);g.lineTo(tb1.x,tb1.y);g.lineTo(tb2.x,tb2.y);g.lineTo(tb3.x,tb3.y);g.fill();
+  drawWalls();drawFloor();drawWindow();drawWhiteboard();drawBulletin();drawClock();
+  drawBookshelf();drawDesk(F.dL);drawDesk(F.dR);drawChair(F.cL);drawChair(F.cR);
+  drawWaterCooler();drawCoffeeMachine();
   drawPlant(F.pB.x,F.pB.y,F.pB.z,true,plant.wilt);
   drawPlant(F.pM.x,F.pM.y,F.pM.z,true,.5);
   drawPlant(F.pS1.x,F.pS1.y,F.pS1.z,false,.3);
   drawPlant(F.pS2.x,F.pS2.y,F.pS2.z,false,.6);
   drawTrash();
-
-  // 角色排序
   var sorted=ppl.slice().sort(function(a,b){return(a.x+a.y)-(b.x+b.y);});
   for(var i=0;i<sorted.length;i++)drawPerson(sorted[i]);
-
-  drawGlassBox();
-  drawUI();
-  drawAmbient();
+  drawGlassBox();drawUI();drawAmbient();
 }
 
-init();
-var lt=0;
+init();var lt=0;
 (function loop(t){var dt=lt?t-lt:16;lt=t;update(dt);draw();requestAnimationFrame(loop);})(0);
 })();
 </script>
