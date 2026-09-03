@@ -1,18 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>办公室生态缸</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#0d0a06}
-canvas{display:block;position:absolute;image-rendering:pixelated;image-rendering:crisp-edges}
-</style>
-</head>
-<body>
-<canvas id="c"></canvas>
-<script>
+
 (function(){
 var cv=document.getElementById('c'),g=cv.getContext('2d');
 var W=560,H=720;
@@ -288,6 +274,3 @@ function draw(){
 init();var lt=0;
 (function loop(t){var dt=lt?t-lt:16;lt=t;update(dt);draw();requestAnimationFrame(loop);})(0);
 })();
-</script>
-</body>
-</html>
