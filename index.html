@@ -15,6 +15,7 @@ canvas{display:block;position:absolute;image-rendering:pixelated;image-rendering
 <script>
 (function(){
 var cv=document.getElementById('c'),g=cv.getContext('2d');
+g.imageSmoothingEnabled=false;g.mozImageSmoothingEnabled=false;g.webkitImageSmoothingEnabled=false;g.msImageSmoothingEnabled=false;
 var W=560,H=720;
 cv.width=W;cv.height=H;
 function fit(){var r=Math.min(innerWidth/W,innerHeight/H);cv.style.width=Math.floor(W*r)+'px';cv.style.height=Math.floor(H*r)+'px';cv.style.left=Math.floor((innerWidth-W*r)/2)+'px';cv.style.top=Math.floor((innerHeight-H*r)/2)+'px';}
