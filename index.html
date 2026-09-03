@@ -103,19 +103,29 @@ function update(dt){
 }
 
 // ===== 轴测绘制 =====
-function drawBlock(wx,wy,wz,bw,bd,bh,topC,frontC,sideC){
+// 顶面 + 左面 + 前面 (从顶部俯视可见的三个面)
+function drawBlock(wx,wy,wz,bw,bd,bh,topC,leftC,frontC){
   var p=[];
-  p[0]=toS(wx,wy,wz);
-  p[1]=toS(wx+bw,wy,wz);
-  p[2]=toS(wx+bw,wy+bd,wz);
-  p[3]=toS(wx,wy+bd,wz);
-  p[4]=toS(wx,wy,wz+bh);
-  p[5]=toS(wx+bw,wy,wz+bh);
-  p[6]=toS(wx+bw,wy+bd,wz+bh);
-  p[7]=toS(wx,wy+bd,wz+bh);
-  g.fillStyle=topC;g.beginPath();g.moveTo(p[4].x,p[4].y);g.lineTo(p[5].x,p[5].y);g.lineTo(p[6].x,p[6].y);g.lineTo(p[7].x,p[7].y);g.fill();
-  g.fillStyle=frontC;g.beginPath();g.moveTo(p[0].x,p[0].y);g.lineTo(p[1].x,p[1].y);g.lineTo(p[5].x,p[5].y);g.lineTo(p[4].x,p[4].y);g.fill();
-  g.fillStyle=sideC;g.beginPath();g.moveTo(p[1].x,p[1].y);g.lineTo(p[2].x,p[2].y);g.lineTo(p[6].x,p[6].y);g.lineTo(p[5].x,p[5].y);g.fill();
+  p[0]=toS(wx,wy,wz);       // 前左底
+  p[1]=toS(wx+bw,wy,wz);    // 前右底
+  p[2]=toS(wx+bw,wy+bd,wz); // 后右底
+  p[3]=toS(wx,wy+bd,wz);    // 后左底
+  p[4]=toS(wx,wy,wz+bh);    // 前左顶
+  p[5]=toS(wx+bw,wy,wz+bh); // 前右顶
+  p[6]=toS(wx+bw,wy+bd,wz+bh);// 后右顶
+  p[7]=toS(wx,wy+bd,wz+bh); // 后左顶
+  // 顶面
+  g.fillStyle=topC;g.beginPath();
+  g.moveTo(p[4].x,p[4].y);g.lineTo(p[5].x,p[5].y);
+  g.lineTo(p[6].x,p[6].y);g.lineTo(p[7].x,p[7].y);g.fill();
+  // 左面 (面向观众, y 大的一侧)
+  g.fillStyle=leftC;g.beginPath();
+  g.moveTo(p[0].x,p[0].y);g.lineTo(p[3].x,p[3].y);
+  g.lineTo(p[7].x,p[7].y);g.lineTo(p[4].x,p[4].y);g.fill();
+  // 前面 (面向观众, y 小的一侧)
+  g.fillStyle=frontC;g.beginPath();
+  g.moveTo(p[0].x,p[0].y);g.lineTo(p[1].x,p[1].y);
+  g.lineTo(p[5].x,p[5].y);g.lineTo(p[4].x,p[4].y);g.fill();
 }
 
 function drawFloor(){
