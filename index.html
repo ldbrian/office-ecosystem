@@ -146,9 +146,11 @@ function drawFloor(){
   for(var x=0;x<RW;x++)drawBlock(x,RD+0.3,6,1,0.3,4,'#5A8A3A','#4A7A2A','#3A6A1A');
 }
 
-function drawWalls(){
+function drawBackWalls(){
   drawBlock(0,0,0,RW,0.3,WALL_H,'#E8DCD0','#DDD0C0','#D0C4B4');
   drawBlock(0,0,0,0.3,RD,WALL_H,'#EDE3D5','#DDD0C0','#D0C4B4');
+}
+function drawFrontWalls(){
   drawBlock(RW-0.3,0,0,0.3,RD,WALL_H,'#E8DCD0','#D8CCBC','#C8BCA8');
 }
 
@@ -295,7 +297,7 @@ function draw(){
   g.clearRect(0,0,W,H);g.fillStyle='#1a1510';g.fillRect(0,0,W,H);
   var tb0=toS(-1,-1,-2),tb1=toS(RW+1,-1,-2),tb2=toS(RW+1,RD+2,-2),tb3=toS(-1,RD+2,-2);
   g.fillStyle='#B89868';g.beginPath();g.moveTo(tb0.x,tb0.y);g.lineTo(tb1.x,tb1.y);g.lineTo(tb2.x,tb2.y);g.lineTo(tb3.x,tb3.y);g.fill();
-  drawWalls();drawFloor();drawWindow();drawWhiteboard();drawBulletin();drawClock();
+  drawBackWalls();drawFloor();drawWindow();drawWhiteboard();drawBulletin();drawClock();
   drawBookshelf();drawDesk(F.dL);drawDesk(F.dR);drawChair(F.cL);drawChair(F.cR);
   drawWaterCooler();drawCoffeeMachine();
   drawPlant(F.pB.x,F.pB.y,F.pB.z,true,plant.wilt);
@@ -305,7 +307,7 @@ function draw(){
   drawTrash();
   var sorted=ppl.slice().sort(function(a,b){return(a.x+a.y)-(b.x+b.y);});
   for(var i=0;i<sorted.length;i++)drawPerson(sorted[i]);
-  drawGlassBox();drawUI();drawAmbient();
+  drawFrontWalls();drawGlassBox();drawUI();drawAmbient();
 }
 
 Promise.all([
