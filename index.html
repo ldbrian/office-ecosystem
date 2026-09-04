@@ -304,8 +304,8 @@ function draw(){
   // Layer 1: 地板
   drawFloor();
 
-  // Layer 2: 后墙装饰 (挂在后墙上, 固定在家具之前)
-  drawWindow();drawWhiteboard();drawBulletin();drawClock();
+  // Layer 2: 后墙装饰 + 玻璃缸 (在家具之前绘制)
+  drawWindow();drawWhiteboard();drawBulletin();drawClock();drawGlassBox();
 
   // Layer 3: 所有家具+角色 按 depth=x+y 排序
   var items=[
@@ -330,8 +330,8 @@ function draw(){
   items.sort(function(a,b){return a.depth-b.depth;});
   for(var i=0;i<items.length;i++)items[i].fn();
 
-  // Layer 4: 前墙 + 玻璃缸 + UI
-  drawFrontWalls();drawGlassBox();drawUI();drawAmbient();
+  // Layer 4: 前墙 + UI
+  drawFrontWalls();drawUI();drawAmbient();
 }
 
 Promise.all([
