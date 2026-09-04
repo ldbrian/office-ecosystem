@@ -47,7 +47,7 @@ var F={
   dR:{x:6,y:5,z:0,w:3,d:2,h:44},
   cL:{x:2,y:6.5,z:0},
   cR:{x:7,y:6.5,z:0},
-  bs:{x:0.3,y:0.3,z:0,w:1.5,d:1,h:130},
+  bs:{x:1.2,y:0.8,z:0,w:1.5,d:1,h:130},
   pr:{x:0.5,y:3.5,z:0,w:1.5,d:1,h:36},
   wc:{x:8.5,y:1,z:0,w:1,d:1,h:90},
   cf:{x:8.5,y:3,z:0,w:1,d:1,h:56},
@@ -297,16 +297,40 @@ function draw(){
   g.clearRect(0,0,W,H);g.fillStyle='#1a1510';g.fillRect(0,0,W,H);
   var tb0=toS(-1,-1,-2),tb1=toS(RW+1,-1,-2),tb2=toS(RW+1,RD+2,-2),tb3=toS(-1,RD+2,-2);
   g.fillStyle='#B89868';g.beginPath();g.moveTo(tb0.x,tb0.y);g.lineTo(tb1.x,tb1.y);g.lineTo(tb2.x,tb2.y);g.lineTo(tb3.x,tb3.y);g.fill();
-  drawBackWalls();drawFloor();drawWindow();drawWhiteboard();drawBulletin();drawClock();
-  drawBookshelf();drawDesk(F.dL);drawDesk(F.dR);drawChair(F.cL);drawChair(F.cR);
-  drawWaterCooler();drawCoffeeMachine();
-  drawPlant(F.pB.x,F.pB.y,F.pB.z,true,plant.wilt);
-  drawPlant(F.pM.x,F.pM.y,F.pM.z,true,.5);
-  drawPlant(F.pS1.x,F.pS1.y,F.pS1.z,false,.3);
-  drawPlant(F.pS2.x,F.pS2.y,F.pS2.z,false,.6);
-  drawTrash();
-  var sorted=ppl.slice().sort(function(a,b){return(a.x+a.y)-(b.x+b.y);});
-  for(var i=0;i<sorted.length;i++)drawPerson(sorted[i]);
+
+  // Layer 0: 后墙 (固定最底层)
+  drawBackWalls();
+
+  // Layer 1: 地板
+  drawFloor();
+
+  // Layer 2: 后墙装饰 (挂在后墙上, 固定在家具之前)
+  drawWindow();drawWhiteboard();drawBulletin();drawClock();
+
+  // Layer 3: 所有家具+角色 按 depth=x+y 排序
+  var items=[
+    {fn:function(){drawBookshelf();},depth:F.bs.x+F.bs.y},
+    {fn:function(){drawDesk(F.dL);},depth:F.dL.x+F.dL.y+F.dL.d/2},
+    {fn:function(){drawDesk(F.dR);},depth:F.dR.x+F.dR.y+F.dR.d/2},
+    {fn:function(){drawChair(F.cL);},depth:F.cL.x+F.cL.y},
+    {fn:function(){drawChair(F.cR);},depth:F.cR.x+F.cR.y},
+    {fn:function(){drawWaterCooler();},depth:F.wc.x+F.wc.y+F.wc.d/2},
+    {fn:function(){drawCoffeeMachine();},depth:F.cf.x+F.cf.y+F.cf.d/2},
+    {fn:function(){drawPlant(F.pB.x,F.pB.y,F.pB.z,true,plant.wilt);},depth:F.pB.x+F.pB.y},
+    {fn:function(){drawPlant(F.pM.x,F.pM.y,F.pM.z,true,.5);},depth:F.pM.x+F.pM.y},
+    {fn:function(){drawPlant(F.pS1.x,F.pS1.y,F.pS1.z,false,.3);},depth:F.pS1.x+F.pS1.y},
+    {fn:function(){drawPlant(F.pS2.x,F.pS2.y,F.pS2.z,false,.6);},depth:F.pS2.x+F.pS2.y},
+    {fn:function(){drawTrash();},depth:F.tr.x+F.tr.y}
+  ];
+  var sorted_ppl=ppl.slice().sort(function(a,b){return(a.x+a.y)-(b.x+b.y);});
+  for(var i=0;i<sorted_ppl.length;i++){
+    var pp=sorted_ppl[i];
+    items.push({fn:function(p){return function(){drawPerson(p);};}(pp),depth:pp.x+pp.y});
+  }
+  items.sort(function(a,b){return a.depth-b.depth;});
+  for(var i=0;i<items.length;i++)items[i].fn();
+
+  // Layer 4: 前墙 + 玻璃缸 + UI
   drawFrontWalls();drawGlassBox();drawUI();drawAmbient();
 }
 
