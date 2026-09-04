@@ -311,7 +311,7 @@ function draw(){
 }
 
 Promise.all([
-  loadImg('bookshelf','assets/bookshelf.jpg')
+  loadImg('bookshelf','assets/bookshelf.png')
 ]).then(function(){
   init();var lt=0;
   (function loop(t){var dt=lt?t-lt:16;lt=t;update(dt);draw();requestAnimationFrame(loop);})(0);
